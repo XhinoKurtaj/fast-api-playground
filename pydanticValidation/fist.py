@@ -121,3 +121,77 @@ class UserRegistration(BaseModel):
         return values
 
 #Applying validation before Pydantic parsing
+class Model(BaseModel):
+    values      :   List[int]
+
+    @validator('values', pre=True)
+    def split_string_values(cls, v):
+        if isinstance(v, str):
+            return v.split(',')
+        return v
+
+
+person = Person(
+    first_name      =   'John',
+    last_name       =   'Doe',
+    gender          =   Gender.MALE,
+    birthdate       =   '1991-01-01',
+    interests       =   ['travel', 'sports'],
+    address         =   {
+        'street_address'    :   '12 Squirell Street',
+        'postal_code'       :   '424242',
+        'city'              :   'Woodtown',
+        'country'           :   'US',
+    },
+)
+
+person_dict     = person.dict()
+person_include  = person.dict(include={'first_name', 'last_name'})
+
+
+#Creating an instance from a sub-class object
+class PostBase(BaseModel):
+    title       :   str
+    content     :   str
+
+class PostParticularUpdate(BaseModel):
+    title       :   Optional[str]   =   None
+    content     :   Optional[str]   =   None
+
+
+@app.patch('/posts/{id}', response_model=PostPublic)
+async def partial_update(id: int, post_update: PostParticularUpdate):
+    try:
+        post_db             =   db.posts[id]
+        updated_fields      =   post_update.dict(exclude_unset=True)
+        update_post         =   post_db.copy(update=updated_fields)
+        db.posts[id]        =   update_post
+        return update_post
+    except KeyError:
+        raise HTTPException(status.HTTP_404_NOT_FOUND)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
