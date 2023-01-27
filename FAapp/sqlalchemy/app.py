@@ -52,3 +52,27 @@ async def get_post_or_404(
     if raw_post is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     return PostDB(**raw_post)
+
+
+@app.patch('/posts/{id}', response_model=PostDB)
+async def update_post(
+    post_update     :       PostPartialUpdateRequest,
+    post            :       PostDB      = Depends(get_post_or_404),
+    database        :       Database    = Depends(get_database),
+)   ->  PostDB:
+    update_query = (
+        post.update()
+        .where(posts.c.id == post.id)
+        .values(post_update.dict(exclude_unset=True))
+    )
+    post_id = await database.execute(update_query)
+    post_db = await get_post_or_404(post_id, database)
+    return post_db
+
+@app.delete('/posts/{id}', status_code=HTTP_204_NO_CONTENT)
+async def delete_post(
+    post        : PostDB    = Depends(get_post_or_404),
+    database    : Database  = Depends(get_database),
+):
+    delete_query = posts.delete().where(posts.c.id == post.id)
+    await database.execute(delete_query)
